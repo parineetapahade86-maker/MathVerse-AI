@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MathVerse AI — See Mathematics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.2/lib/browser/math.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <style>
+    :root { color-scheme: dark; }
+    body { font-family: 'Inter', sans-serif; background: #020617; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .glass { backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(148, 163, 184, 0.1); }
+    .glass-strong { backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); background: rgba(2, 6, 23, 0.8); border: 1px solid rgba(148, 163, 184, 0.15); }
+    .gradient-text { background: linear-gradient(90deg, #7c3aed 0%, #06b6d4 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .gradient-bg { background: linear-gradient(90deg, #7c3aed 0%, #06b6d4 100%); }
+    .tab-active { color: white; border-bottom: 2px solid #06b6d4; background: rgba(124, 58, 237, 0.1); }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .glow { box-shadow: 0 0 40px rgba(124, 58, 237, 0.15), 0 0 80px rgba(6, 182, 212, 0.1); }
+  </style>
+</head>
+<body class="min-h-screen text-slate-100 relative overflow-x-hidden">
+  <!-- Background -->
+  <div class="fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-[#020617]"></div>
+    <div class="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-violet-600/20 blur-[120px]"></div>
+    <div class="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-cyan-500/20 blur-[120px]"></div>
+    <div class="absolute top-[30%] left-[50%] -translate-x-1/2 w-[800px] h-[800px] rounded-full bg-indigo-600/10 blur-[100px]"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 glass-strong">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl gradient-bg flex items-center justify-center glow">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2L20 7V17L12 22L4 17V7L12 2Z" stroke="white" stroke-width="1.5" fill="white" fill-opacity="0.2"/></svg>
+        </div>
+        <div>
+          <h1 class="text-xl sm:text-2xl font-semibold tracking-tight">MathVerse <span class="gradient-text">AI</span></h1>
+          <p class="text-xs text-slate-400 -mt-1 hidden sm:block">See Mathematics, Don't Just Solve It</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div id="xp-counter" class="glass px-4 py-2 rounded-full flex items-center gap-2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="url(#g)" /></svg>
+          <span class="text-sm font-medium"><span id="xp-value" class="mono">0</span> XP</span>
+          <svg width="0" height="0"><defs><linearGradient id="g" x1="0" x2="24" y1="0" y2="24"><stop stop-color="#7c3aed"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs></svg>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <nav class="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
+    <div class="glass rounded-2xl p-1.5 overflow-x-auto scrollbar-hide">
+      <div class="flex gap-1.5 min-w-max">
+        <button data-tab="solver" class="tab-btn tab-active px-4 py-2.5 rounded-xl text-sm font-medium transition whitespace-nowrap">✨ Visual Solver</button>
+        <button data-tab="lab3d" class="tab-btn px-4 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white transition whitespace-nowrap">🧊 3D Lab</button>
+        <button data-tab="graph" class="tab-btn px-4 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white transition whitespace-nowrap">📈 Graph Universe</button>
+        <button data-tab="trig" class="tab-btn px-4 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white transition whitespace-nowrap">⭕ Trigonometry</button>
+        <button data-tab="calculus" class="tab-btn px-4 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white transition whitespace-nowrap">∫ Calculus</button>
+        <button data-tab="ai" class="tab-btn px-4 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white transition whitespace-nowrap">🤖 AI Teacher</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-20">
+    <!-- 1. Visual Solver -->
+    <section id="solver" class="tab-panel">
+      <div class="grid lg:grid-cols-5 gap-6">
+        <div class="lg:col-span-2 space-y-4">
+          <div class="glass rounded-3xl p-6 glow">
+            <h2 class="text-lg font-semibold mb-1">Visual Equation Solver</h2>
+            <p class="text-sm text-slate-400 mb-4">Enter any quadratic. We'll solve, explain, and visualize.</p>
+            <div class="relative">
+              <input id="eq-input" class="w-full bg-slate-900/70 border border-slate-700 rounded-2xl px-4 py-3 pr-12 mono text-lg focus:outline-none focus:ring-2 focus:ring-violet-500/50" value="x^2 + 5x + 6 = 0" />
+              <button id="solve-btn" class="absolute right-2 top-1.5 bottom-1.5 px-4 rounded-xl gradient-bg font-medium text-sm hover:opacity-90 transition">Solve</button>
+            </div>
+            <div class="flex flex-wrap gap-2 mt-3">
+              <button class="sample-eq px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs mono">x^2 - 4 = 0</button>
+              <button class="sample-eq px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs mono">2x^2 + 3x - 2 = 0</button>
+              <button class="sample-eq px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs mono">x^2 - 6x + 9 = 0</button>
+            </div>
+          </div>
+          <div class="glass rounded-3xl p-6">
+            <h3 class="font-semibold mb-3 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-cyan-400"></span>Solution Steps</h3>
+            <div id="solver-steps" class="space-y-3 text-sm text-slate-300">
+              <p class="text-slate-500">Solve an equation to see step-by-step reasoning.</p>
+            </div>
+          </div>
+        </div>
+        <div class="lg:col-span-3 space-y-4">
+          <div class="grid sm:grid-cols-3 gap-4">
+            <div class="glass rounded-2xl p-4">
+              <div class="text-xs text-slate-400">Roots</div>
+              <div id="roots-val" class="text-xl font-semibold mono mt-1">—</div>
+            </div>
+            <div class="glass rounded-2xl p-4">
+              <div class="text-xs text-slate-400">Vertex</div>
+              <div id="vertex-val" class="text-xl font-semibold mono mt-1">—</div>
+            </div>
+            <div class="glass rounded-2xl p-4">
+              <div class="text-xs text-slate-400">Discriminant</div>
+              <div id="disc-val" class="text-xl font-semibold mono mt-1">—</div>
+            </div>
+          </div>
+          <div class="glass rounded-3xl p-4 h-[420px]">
+            <div id="solver-plot" class="w-full h-full"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. 3D Lab -->
+    <section id="lab3d" class="tab-panel hidden">
+      <div class="grid lg:grid-cols-5 gap-6">
+        <div class="lg:col-span-2 space-y-4">
+          <div class="glass rounded-3xl p-6">
+            <h2 class="text-lg font-semibold mb-4">3D Shape Lab</h2>
+            <div class="flex gap-2 mb-5">
+              <button data-shape="cylinder" class="shape-btn px-4 py-2 rounded-xl bg-violet-600 text-white text-sm">Cylinder</button>
+              <button data-shape="sphere" class="shape-btn px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-sm">Sphere</button>
+              <button data-shape="cone" class="shape-btn px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-sm">Cone</button>
+            </div>
+            <div class="space-y-5">
+              <div>
+                <div class="flex justify-between text-sm mb-2"><span class="text-slate-400">Radius (r)</span><span class="mono" id="radius-val">1.5</span></div>
+                <input id="radius-slider" type="range" min="0.5" max="3" step="0.1" value="1.5" class="w-full accent-violet-500">
+              </div>
+              <div id="height-control">
+                <div class="flex justify-between text-sm mb-2"><span class="text-slate-400">Height (h)</span><span class="mono" id="height-val">2.5</span></div>
+                <input id="height-slider" type="range" min="0.5" max="5" step="0.1" value="2.5" class="w-full accent-cyan-500">
+              </div>
+            <div class="mt-6 p-4 rounded-2xl bg-slate-900/70 border border-slate-800">
+              <div class="text-xs text-slate-400 mb-1">Live Formula</div>
+              <div id="volume-formula" class="mono text-lg gradient-text">V = πr²h</div>
+              <div class="text-2xl font-semibold mt-1"><span id="volume-value" class="mono">17.67</span> <span class="text-sm text-slate-500">units³</span></div>
+            </div>
+            <p class="text-xs text-slate-500 mt-3">Drag to rotate • Scroll to zoom</p>
+          </div>
+        </div>
+        <div class="lg:col-span-3">
+          <div class="glass rounded-3xl p-2 h-[520px] overflow-hidden">
+            <div id="three-container" class="w-full h-full rounded-2xl overflow-hidden relative bg-slate-950"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Graph Universe -->
+    <section id="graph" class="tab-panel hidden">
+      <div class="grid lg:grid-cols-5 gap-6">
+        <div class="lg:col-span-2">
+          <div class="glass rounded-3xl p-6 sticky top-24">
+            <h2 class="text-lg font-semibold mb-1">Graph Universe</h2>
+            <p class="text-sm text-slate-400 mb-4">Plot any function f(x)</p>
+            <input id="graph-input" class="w-full bg-slate-900/70 border border-slate-700 rounded-2xl px-4 py-3 mono focus:outline-none focus:ring-2 focus:ring-cyan-500/50" value="sin(x) * cos(2x)" />
+            <div class="flex items-center justify-between mt-4">
+              <label class="flex items-center gap-2 text-sm cursor-pointer">
+                <input id="deriv-toggle" type="checkbox" class="w-4 h-4 rounded accent-cyan-500 bg-slate-800 border-slate-600">
+                <span>Show derivative f'(x)</span>
+              </label>
+              <button id="graph-btn" class="px-4 py-2 rounded-xl gradient-bg text-sm font-medium">Plot</button>
+            </div>
+            <div class="flex flex-wrap gap-2 mt-4">
+              <button class="graph-sample px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs mono">sin(x)</button>
+              <button class="graph-sample px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs mono">x^3 - 3x</button>
+              <button class="graph-sample px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs mono">exp(-x^2)</button>
+            </div>
+          </div>
+        </div>
+        <div class="lg:col-span-3">
+          <div class="glass rounded-3xl p-4 h-[520px]">
+            <div id="graph-plot" class="w-full h-full"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Trigonometry -->
+    <section id="trig" class="tab-panel hidden">
+      <div class="grid lg:grid-cols-5 gap-6">
+        <div class="lg:col-span-3">
+          <div class="glass rounded-3xl p-6 flex items-center justify-center">
+            <canvas id="unit-circle" width="480" height="480" class="max-w-full"></canvas>
+          </div>
+        </div>
+        <div class="lg:col-span-2 space-y-4">
+          <div class="glass rounded-3xl p-6">
+            <h2 class="text-lg font-semibold mb-2">Unit Circle Explorer</h2>
+            <p class="text-sm text-slate-400 mb-4">Slide to see sine and cosine come alive.</p>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm text-slate-400">Angle</span>
+              <span class="mono text-2xl font-semibold gradient-text"><span id="angle-val">45</span>°</span>
+            </div>
+            <input id="angle-slider" type="range" min="0" max="360" value="45" class="w-full accent-violet-500">
+            <div class="grid grid-cols-3 gap-3 mt-6">
+              <div class="bg-slate-900/60 rounded-2xl p-4 border border-slate-800">
+                <div class="text-xs text-slate-500">sin θ</div>
+                <div id="sin-val" class="text-xl mono font-medium">0.707</div>
+              </div>
+              <div class="bg-slate-900/60 rounded-2xl p-4 border border-slate-800">
+                <div class="text-xs text-slate-500">cos θ</div>
+                <div id="cos-val" class="text-xl mono font-medium">0.707</div>
+              </div>
+              <div class="bg-slate-900/60 rounded-2xl p-4 border border-slate-800">
+                <div class="text-xs text-slate-500">tan θ</div>
+                <div id="tan-val" class="text-xl mono font-medium">1.000</div>
+              </div>
+            </div>
+          <div class="glass rounded-3xl p-6">
+            <h3 class="font-medium mb-2">Key Identities</h3>
+            <div class="space-y-2 text-sm mono text-slate-300">
+              <div>sin²θ + cos²θ = 1</div>
+              <div>θ = <span id="rad-val">0.785</span> rad</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Calculus -->
+    <section id="calculus" class="tab-panel hidden">
+      <div class="grid lg:grid-cols-5 gap-6">
+        <div class="lg:col-span-2 space-y-4">
+          <div class="glass rounded-3xl p-6">
+            <h2 class="text-lg font-semibold">Area Under Curve</h2>
+            <p class="text-sm text-slate-400 mt-1">Visualizing ∫₀² x² dx</p>
+            <div class="mt-6 space-y-4">
+              <div class="p-4 rounded-2xl bg-slate-900/70 border border-slate-800">
+                <div class="text-xs text-slate-500">Function</div>
+                <div class="mono text-lg">f(x) = x²</div>
+              </div>
+              <div class="p-4 rounded-2xl bg-slate-900/70 border border-slate-800">
+                <div class="text-xs text-slate-500">Exact Integral</div>
+                <div class="text-2xl font-semibold gradient-text mono">8/3 ≈ 2.667</div>
+              </div>
+              <div class="p-4 rounded-2xl bg-slate-900/70 border border-slate-800">
+                <div class="text-xs text-slate-500">Interpretation</div>
+                <div class="text-sm text-slate-300">The filled area represents the accumulation of f(x) from 0 to 2.</div>
+              </div>
+            </div>
+          </div>
+        <div class="lg:col-span-3">
+          <div class="glass rounded-3xl p-4 h-[520px]">
+            <div id="calculus-plot" class="w-full h-full"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. AI Teacher -->
+    <section id="ai" class="tab-panel hidden">
+      <div class="max-w-4xl mx-auto">
+        <div class="glass rounded-3xl overflow-hidden glow">
+          <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+            <div>
+              <h2 class="font-semibold">AI Math Tutor</h2>
+              <p class="text-xs text-slate-400">Ask anything — from quadratics to calculus</p>
+            </div>
+            <div class="text-xs px-2.5 py-1 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30">Beta</div>
+          </div>
+          <div id="chat-messages" class="h-[420px] overflow-y-auto p-6 space-y-4 bg-slate-950/50">
+            <div class="flex gap-3">
+              <div class="w-8 h-8 rounded-xl gradient-bg flex items-center justify-center shrink-0">🤖</div>
+              <div class="glass rounded-2xl px-4 py-3 max-w-[80%]">
+                <p class="text-sm">Hi! I'm your MathVerse AI. Try asking: "Explain the quadratic formula visually" or "What's the derivative of sin(x)?"</p>
+              </div>
+            </div>
+          </div>
+          <div class="p-4 border-t border-slate-800 bg-slate-900/50">
+            <div class="flex gap-2">
+              <div class="flex-1 relative">
+                <input id="ai-input" placeholder="Ask a math question..." class="w-full bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-violet-500/50" />
+                <button id="voice-btn" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center" title="Voice input">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                </button>
+              </div>
+              <button id="ask-btn" class="px-5 py-3 rounded-2xl gradient-bg font-medium text-sm hover:opacity-90 transition">Ask</button>
+            </div>
+            <p class="text-[11px] text-slate-500 mt-2">Demo mode — responses are simulated. Connect your API for full power.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 glass-strong px-4 py-2.5 rounded-2xl text-sm opacity-0 pointer-events-none transition"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+let xp = parseInt(localStorage.getItem('mv-xp')||'0');
+$('#xp-value').textContent = xp;
+function addXP(n){ xp+=n; $('#xp-value').textContent = xp; localStorage.setItem('mv-xp', xp); gsap.fromTo('#xp-counter', {scale:1.1}, {scale:1, duration:0.3, ease:'back.out'}); showToast(`+${n} XP`); }
+function showToast(msg){ const t=$('#toast'); t.textContent=msg; t.style.opacity='1'; setTimeout(()=>t.style.opacity='0',1800); }
+
+// Tabs
+$$('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    $$('.tab-btn').forEach(b=>b.classList.remove('tab-active','text-white'));
+    $$('.tab-btn').forEach(b=>b.classList.add('text-slate-400'));
+    btn.classList.add('tab-active','text-white'); btn.classList.remove('text-slate-400');
+    $$('.tab-panel').forEach(p=>p.classList.add('hidden'));
+    $('#'+btn.dataset.tab).classList.remove('hidden');
+    gsap.fromTo('#'+btn.dataset.tab, {y:10, opacity:0}, {y:0, opacity:1, duration:0.4});
+    if(btn.dataset.tab==='graph') setTimeout(()=>Plotly.Plots.resize($('#graph-plot')),100);
+    if(btn.dataset.tab==='solver') setTimeout(()=>Plotly.Plots.resize($('#solver-plot')),100);
+    if(btn.dataset.tab==='calculus') setTimeout(()=>Plotly.Plots.resize($('#calculus-plot')),100);
+  });
+});
+
+// 1. VISUAL SOLVER
+function solveQuadratic(){
+  const raw = $('#eq-input').value.trim();
+  try{
+    const parts = raw.split('=');
+    const left = parts[0]||'0';
+    const right = parts[1]||'0';
+    const expr = `(${left})-(${right})`;
+    const f = x => math.evaluate(expr, {x});
+    const f0 = f(0), f1 = f(1), f2 = f(2);
+    const a = (f2 - 2*f1 + f0)/2;
+    const b = f1 - a - f0;
+    const c = f0;
+    const eps=1e-9;
+    if(Math.abs(a) < eps){ // linear
+      const root = -c/b;
+      $('#roots-val').textContent = root.toFixed(3);
+      $('#vertex-val').textContent = '—';
+      $('#disc-val').textContent = '—';
+      $('#solver-steps').innerHTML = `
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800"><span class="text-slate-500">1.</span> Linear form: ${b.toFixed(2)}x + ${c.toFixed(2)} = 0</div>
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800"><span class="text-slate-500">2.</span> x = -c/b = ${root.toFixed(4)}</div>`;
+      plotLinear(b,c);
+      addXP(15); return;
+    }
+    const D = b*b - 4*a*c;
+    const xv = -b/(2*a);
+    const yv = a*xv*xv + b*xv + c;
+    let r1, r2;
+    if(D>=0){ r1 = (-b+Math.sqrt(D))/(2*a); r2 = (-b-Math.sqrt(D))/(2*a); }
+    else { const re = (-b/(2*a)).toFixed(3); const im = (Math.sqrt(-D)/(2*a)).toFixed(3); r1 = `${re}+${im}i`; r2 = `${re}-${im}i`; }
+    $('#roots-val').textContent = typeof r1==='number' ? `${r1.toFixed(3)}, ${r2.toFixed(3)}` : `${r1}, ${r2}`;
+    $('#vertex-val').textContent = `(${xv.toFixed(2)}, ${yv.toFixed(2)})`;
+    $('#disc-val').textContent = D.toFixed(3);
+    $('#solver-steps').innerHTML = `
+      <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800"><span class="text-cyan-400">1.</span> Identify a=${a.toFixed(3)}, b=${b.toFixed(3)}, c=${c.toFixed(3)}</div>
+      <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800"><span class="text-cyan-400">2.</span> Discriminant D = b²-4ac = ${D.toFixed(3)}</div>
+      <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800"><span class="text-cyan-400">3.</span> Roots via quadratic formula</div>
+      <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800"><span class="text-cyan-400">4.</span> Vertex at x=-b/2a = ${xv.toFixed(3)}</div>`;
+    plotQuadratic(a,b,c,xv);
+    addXP(25);
+  }catch(e){ showToast('Check equation format'); }
+}
+function plotQuadratic(a,b,c,xv){
+  const xs=[], ys=[]; const min=xv-5, max=xv+5;
+  for(let x=min; x<=max; x+=0.05){ xs.push(x); ys.push(a*x*x+b*x+c); }
+  const trace = {x:xs, y:ys, mode:'lines', line:{width:3, color:'#8b5cf6'}, name:'f(x)'};
+  const layout = {margin:{l:40,r:20,t:20,b:40}, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#cbd5e1'}, xaxis:{gridcolor:'#1e293b', zerolinecolor:'#334155'}, yaxis:{gridcolor:'#1e293b', zerolinecolor:'#334155'}};
+  Plotly.newPlot('solver-plot', [trace], layout, {displayModeBar:false, responsive:true});
+}
+function plotLinear(b,c){
+  const xs=[], ys=[]; for(let x=-5;x<=5;x+=0.1){xs.push(x); ys.push(b*x+c);}
+  Plotly.newPlot('solver-plot', [{x:xs,y:ys,line:{color:'#06b6d4',width:3}}], {margin:{l:40,r:20,t:20,b:40}, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#cbd5e1'}, xaxis:{gridcolor:'#1e293b'}, yaxis:{gridcolor:'#1e293b'}}, {displayModeBar:false});
+}
+$('#solve-btn').addEventListener('click', solveQuadratic);
+$$('.sample-eq').forEach(b=>b.addEventListener('click',()=>{ $('#eq-input').value=b.textContent; solveQuadratic(); }));
+setTimeout(solveQuadratic, 300);
+
+// 2. 3D LAB
+let scene, camera, renderer, mesh, shape='cylinder', radius=1.5, height=2.5;
+function init3D(){
+  const container = $('#three-container');
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(45, container.clientWidth/container.clientHeight, 0.1, 100);
+  camera.position.set(3.5,2.5,4.5);
+  renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  container.innerHTML=''; container.appendChild(renderer.domElement);
+  scene.add(new THREE.AmbientLight(0xffffff,0.7));
+  const dir = new THREE.DirectionalLight(0xffffff,1); dir.position.set(5,5,5); scene.add(dir);
+  const hemi = new THREE.HemisphereLight(0x7c3aed, 0x06b6d4, 0.3); scene.add(hemi);
+  const grid = new THREE.GridHelper(10,20,0x334155,0x1e293b); grid.position.y=-1.5; scene.add(grid);
+  updateMesh();
+  let dragging=false, px=0, py=0;
+  container.addEventListener('pointerdown', e=>{dragging=true; px=e.clientX; py=e.clientY;});
+  window.addEventListener('pointerup', ()=>dragging=false);
+  container.addEventListener('pointermove', e=>{if(!dragging||!mesh) return; mesh.rotation.y += (e.clientX-px)*0.01; mesh.rotation.x += (e.clientY-py)*0.01; px=e.clientX; py=e.clientY;});
+  container.addEventListener('wheel', e=>{camera.position.z += e.deltaY*0.005; camera.position.z = Math.max(2,Math.min(10,camera.position.z));});
+  function animate(){ requestAnimationFrame(animate); if(mesh && !dragging) mesh.rotation.y += 0.003; renderer.render(scene,camera); }
+  animate();
+  window.addEventListener('resize', ()=>{ camera.aspect=container.clientWidth/container.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(container.clientWidth,container.clientHeight); });
+}
+function updateMesh(){
+  if(mesh) scene.remove(mesh);
+  let geo;
+  const mat = new THREE.MeshPhysicalMaterial({color:0x8b5cf6, metalness:0.1, roughness:0.3, clearcoat:1, clearcoatRoughness:0.2, emissive:0x06b6d4, emissiveIntensity:0.05});
+  if(shape==='cylinder') geo = new THREE.CylinderGeometry(radius, radius, height, 64);
+  if(shape==='sphere') geo = new THREE.SphereGeometry(radius, 64, 64);
+  if(shape==='cone') geo = new THREE.ConeGeometry(radius, height, 64);
+  mesh = new THREE.Mesh(geo, mat); scene.add(mesh);
+  updateVolume();
+}
+function updateVolume(){
+  let V=0, formula='';
+  if(shape==='cylinder'){V=Math.PI*radius*radius*height; formula=`V = πr²h = π·${radius.toFixed(1)}²·${height.toFixed(1)}`;}
+  if(shape==='sphere'){V=4/3*Math.PI*Math.pow(radius,3); formula=`V = 4/3 πr³ = 4/3·π·${radius.toFixed(1)}³`;}
+  if(shape==='cone'){V=Math.PI*radius*radius*height/3; formula=`V = ⅓ πr²h = ⅓·π·${radius.toFixed(1)}²·${height.toFixed(1)}`;}
+  $('#volume-value').textContent = V.toFixed(2);
+  $('#volume-formula').textContent = formula;
+}
+$$('.shape-btn').forEach(b=>b.addEventListener('click', ()=>{
+  $$('.shape-btn').forEach(x=>x.classList.replace('bg-violet-600','bg-slate-800'));
+  b.classList.replace('bg-slate-800','bg-violet-600'); b.classList.add('text-white');
+  shape=b.dataset.shape; $('#height-control').style.opacity = shape==='sphere' ? '0.4' : '1';
+  updateMesh(); addXP(10);
+}));
+$('#radius-slider').addEventListener('input', e=>{radius=parseFloat(e.target.value); $('#radius-val').textContent = radius.toFixed(1); updateMesh();});
+$('#height-slider').addEventListener('input', e=>{height=parseFloat(e.target.value); $('#height-val').textContent = height.toFixed(1); updateMesh();});
+init3D();
+
+// 3. GRAPH UNIVERSE
+function plotGraph(){
+  const expr = $('#graph-input').value;
+  const showDeriv = $('#deriv-toggle').checked;
+  try{
+    const xs=[], ys=[], y2s=[];
+    for(let x=-10; x<=10; x+=0.05){ xs.push(x); try{ys.push(math.evaluate(expr,{x}))}catch{ys.push(NaN)} }
+    const traces=[{x:xs,y:ys,mode:'lines',name:'f(x)',line:{color:'#7c3aed',width:3}}];
+    if(showDeriv){ const d = math.derivative(expr,'x').toString(); for(let x=-10;x<=10;x+=0.05){ try{y2s.push(math.evaluate(d,{x}))}catch{y2s.push(NaN)} } traces.push({x:xs,y:y2s,mode:'lines',name:"f'(x)",line:{color:'#06b6d4',width:2,dash:'dot'}}); }
+    const layout={margin:{l:40,r:20,t:20,b:40},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{color:'#cbd5e1'},xaxis:{gridcolor:'#1e293b',zerolinecolor:'#334155',range:[-10,10]},yaxis:{gridcolor:'#1e293b',zerolinecolor:'#334155'},legend:{orientation:'h'}};
+    Plotly.newPlot('graph-plot', traces, layout, {displayModeBar:false,responsive:true});
+    addXP(15);
+  }catch(e){ showToast('Invalid function'); }
+}
+$('#graph-btn').addEventListener('click', plotGraph);
+$$('.graph-sample').forEach(b=>b.addEventListener('click',()=>{$('#graph-input').value=b.textContent; plotGraph();}));
+$('#deriv-toggle').addEventListener('change', plotGraph);
+setTimeout(plotGraph, 500);
+
+// 4. TRIGONOMETRY
+const canvas=$('#unit-circle'), ctx=canvas.getContext('2d');
+function drawCircle(angle){
+  const w=canvas.width, h=canvas.height, cx=w/2, cy=h/2, r=180;
+  ctx.clearRect(0,0,w,h);
+  // grid
+  ctx.strokeStyle='#1e293b'; ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){ const y=cy-180+i*90; ctx.beginPath(); ctx.moveTo(cx-200,y); ctx.lineTo(cx+200,y); ctx.stroke(); }
+  // circle
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.strokeStyle='#334155'; ctx.lineWidth=2; ctx.stroke();
+  // axes
+  ctx.strokeStyle='#475569'; ctx.beginPath(); ctx.moveTo(cx-200,cy); ctx.lineTo(cx+200,cy); ctx.moveTo(cx,cy-200); ctx.lineTo(cx,cy+200); ctx.stroke();
+  const rad=angle*Math.PI/180, x=cx+r*Math.cos(rad), y=cy-r*Math.sin(rad);
+  // angle line
+  const grad=ctx.createLinearGradient(cx,cy,x,y); grad.addColorStop(0,'#7c3aed'); grad.addColorStop(1,'#06b6d4');
+  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(x,y); ctx.strokeStyle=grad; ctx.lineWidth=4; ctx.stroke();
+  // projections
+  ctx.setLineDash([5,5]); ctx.strokeStyle='#06b6d4'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(cx,y); ctx.stroke();
+  ctx.setLineDash([]);
+  // point
+  ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill(); ctx.strokeStyle='#7c3aed'; ctx.lineWidth=2; ctx.stroke();
+  // labels
+  ctx.fillStyle='#cbd5e1'; ctx.font='14px JetBrains Mono'; ctx.fillText(`(${Math.cos(rad).toFixed(2)}, ${Math.sin(rad).toFixed(2)})`, x+10, y-10);
+}
+function updateTrig(a){ $('#angle-val').textContent=a; const rad=a*Math.PI/180; $('#sin-val').textContent=Math.sin(rad).toFixed(3); $('#cos-val').textContent=Math.cos(rad).toFixed(3); $('#tan-val').textContent=Math.abs(Math.cos(rad))<0.001?'∞':Math.tan(rad).toFixed(3); $('#rad-val').textContent=rad.toFixed(3); drawCircle(a); }
+$('#angle-slider').addEventListener('input', e=>{ updateTrig(+e.target.value); addXP(1); });
+updateTrig(45);
+
+// 5. CALCULUS
+function plotCalculus(){
+  const xs=[], ys=[]; for(let x=0;x<=2.01;x+=0.01){xs.push(x); ys.push(x*x);}
+  const trace1={x:xs,y:ys,fill:'tozeroy',type:'scatter',mode:'lines',line:{color:'#7c3aed',width:3},fillcolor:'rgba(124,58,237,0.3)',name:'x²'};
+  const layout={margin:{l:40,r:20,t:20,b:40},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{color:'#cbd5e1'},xaxis:{gridcolor:'#1e293b',range:[0,2.5],title:'x'},yaxis:{gridcolor:'#1e293b',range:[0,5],title:'f(x)'},shapes:[{type:'line',x0:2,x1:2,y0:0,y1:4,line:{color:'#06b6d4',dash:'dash'}}],annotations:[{x:1,y:1.5,text:'Area = 8/3',showarrow:false,font:{color:'#06b6d4',size:14}}]};
+  Plotly.newPlot('calculus-plot', [trace1], layout, {displayModeBar:false,responsive:true});
+}
+setTimeout(plotCalculus, 600);
+
+// 6. AI TEACHER
+const chat = $('#chat-messages');
+function addMsg(role, text){
+  const wrap=document.createElement('div'); wrap.className='flex gap-3 '+(role==='user'?'justify-end':'');
+  wrap.innerHTML = role==='user' ?
+    `<div class="glass rounded-2xl px-4 py-3 max-w-[80%] bg-violet-600/20 border-violet-500/30"><p class="text-sm">${text}</p></div><div class="w-8 h-8 rounded-xl bg-slate-700 flex items-center justify-center shrink-0">🧑</div>` :
+    `<div class="w-8 h-8 rounded-xl gradient-bg flex items-center justify-center shrink-0">🤖</div><div class="glass rounded-2xl px-4 py-3 max-w-[80%]"><p class="text-sm">${text}</p></div>`;
+  chat.appendChild(wrap); chat.scrollTop=chat.scrollHeight;
+}
+async function askAI(){
+  const q=$('#ai-input').value.trim(); if(!q) return;
+  addMsg('user', q); $('#ai-input').value=''; addXP(15);
+  // Simulated thinking
+  await new Promise(r=>setTimeout(r,600));
+  // TODO: integrate Gemini 1.5 Flash API here
+  // Example: const res = await fetch('/api/gemini', {method:'POST', body:JSON.stringify({prompt:q})}); const data = await res.json();
+  let ans = "Great question! Let's visualize it. ";
+  const l=q.toLowerCase();
+  if(l.includes('quadratic')) ans+="The quadratic formula x = (-b ± √(b²-4ac))/2a gives the roots. The discriminant tells you how many real solutions: D>0 gives 2, D=0 gives 1, D<0 gives complex.";
+  else if(l.includes('derivative')||l.includes("sin")) ans+="Derivative of sin(x) is cos(x). Visually, cosine is the slope of sine at each point — that's why we plot both in Graph Universe.";
+  else if(l.includes('integral')||l.includes('area')) ans+="∫₀² x² dx = [x³/3]₀² = 8/3 ≈ 2.667. That's the exact area under the parabola — see Calculus tab.";
+  else if(l.includes('volume')) ans+="For a cylinder: V = πr²h. Try changing radius in 3D Lab — volume scales with r², so doubling radius quadruples volume!";
+  else ans+="I can help explain concepts visually. Try the Visual Solver for step-by-step quadratics, or Graph Universe to see functions live. What would you like to explore?";
+  addMsg('ai', ans);
+}
+$('#ask-btn').addEventListener('click', askAI);
+$('#ai-input').addEventListener('keydown', e=>{ if(e.key==='Enter') askAI(); });
+
+// Voice
+let recog=null;
+$('#voice-btn').addEventListener('click', ()=>{
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ showToast('Voice not supported'); return; }
+  if(!recog){ recog = new SR(); recog.lang='en-US'; recog.onresult = e=>{ $('#ai-input').value = e.results[0][0].transcript; askAI(); }; }
+  recog.start(); showToast('Listening...');
+});
+
+// Init animations
+gsap.from('header', {y:-20, opacity:0, duration:0.6, ease:'power2.out'});
+gsap.from('.tab-btn', {y:10, opacity:0, duration:0.4, stagger:0.05, delay:0.2});
+</script>
+<script>(function(){document.addEventListener("click",function(e){var a=e.target.closest("[data-product-id]");if(!a)return;e.preventDefault();var pid=a.getAttribute("data-product-id");if(pid)parent.postMessage({type:"ecto-artifact-link-click",productId:pid},"*")})})();</script>
+</body>
+</html>
